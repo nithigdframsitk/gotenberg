@@ -12,6 +12,7 @@ import (
 type ApiMock struct {
 	PdfMock        func(ctx context.Context, logger *zap.Logger, url, outputPath string, options PdfOptions) error
 	ScreenshotMock func(ctx context.Context, logger *zap.Logger, url, outputPath string, options ScreenshotOptions) error
+	HtmlMock       func(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error
 }
 
 func (api *ApiMock) Pdf(ctx context.Context, logger *zap.Logger, url, outputPath string, options PdfOptions) error {
@@ -22,11 +23,16 @@ func (api *ApiMock) Screenshot(ctx context.Context, logger *zap.Logger, url, out
 	return api.ScreenshotMock(ctx, logger, url, outputPath, options)
 }
 
+func (api *ApiMock) Html(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error {
+	return api.HtmlMock(ctx, logger, url, outputPath, options)
+}
+
 // browserMock is a mock for the [browser] interface.
 type browserMock struct {
 	gotenberg.ProcessMock
 	pdfMock        func(ctx context.Context, logger *zap.Logger, url, outputPath string, options PdfOptions) error
 	screenshotMock func(ctx context.Context, logger *zap.Logger, url, outputPath string, options ScreenshotOptions) error
+	htmlMock       func(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error
 }
 
 func (b *browserMock) pdf(ctx context.Context, logger *zap.Logger, url, outputPath string, options PdfOptions) error {
@@ -35,6 +41,10 @@ func (b *browserMock) pdf(ctx context.Context, logger *zap.Logger, url, outputPa
 
 func (b *browserMock) screenshot(ctx context.Context, logger *zap.Logger, url, outputPath string, options ScreenshotOptions) error {
 	return b.screenshotMock(ctx, logger, url, outputPath, options)
+}
+
+func (b *browserMock) html(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error {
+	return b.htmlMock(ctx, logger, url, outputPath, options)
 }
 
 // Interface guards.

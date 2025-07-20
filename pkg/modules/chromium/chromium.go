@@ -341,6 +341,7 @@ type ExtraHttpHeader struct {
 type Api interface {
 	Pdf(ctx context.Context, logger *zap.Logger, url, outputPath string, options PdfOptions) error
 	Screenshot(ctx context.Context, logger *zap.Logger, url, outputPath string, options ScreenshotOptions) error
+	Html(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error
 }
 
 // Provider is a module interface that exposes a method for creating an [Api]
@@ -592,6 +593,9 @@ func (mod *Chromium) Routes() ([]api.Route, error) {
 		screenshotHtmlRoute(mod),
 		convertMarkdownRoute(mod, mod.engine),
 		screenshotMarkdownRoute(mod),
+		htmlUrlRoute(mod),
+		htmlHtmlRoute(mod),
+		htmlMarkdownRoute(mod),
 	}, nil
 }
 
@@ -609,6 +613,14 @@ func (mod *Chromium) Screenshot(ctx context.Context, logger *zap.Logger, url, ou
 	// the end user.
 	return mod.supervisor.Run(ctx, logger, func() error {
 		return mod.browser.screenshot(ctx, logger, url, outputPath, options)
+	})
+}
+
+func (mod *Chromium) Html(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error {
+	// Note: no error wrapping because it leaks on errors we want to display to
+	// the end user.
+	return mod.supervisor.Run(ctx, logger, func() error {
+		return mod.browser.html(ctx, logger, url, outputPath, options)
 	})
 }
 

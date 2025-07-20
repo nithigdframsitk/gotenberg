@@ -512,3 +512,36 @@ func waitForExpressionBeforePrintActionFunc(logger *zap.Logger, disableJavaScrip
 		}
 	}
 }
+
+func getRenderedHtmlActionFunc(logger *zap.Logger, outputPath string) chromedp.ActionFunc {
+	return func(ctx context.Context) error {
+		logger.Debug("getting rendered HTML content")
+
+		var htmlContent string
+		err := chromedp.OuterHTML("html", &htmlContent).Do(ctx)
+		if err != nil {
+			return fmt.Errorf("get rendered HTML: %w", err)
+		}
+
+		logger.Debug("writing rendered HTML to file")
+
+		file, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+		if err != nil {
+			return fmt.Errorf("open output path: %w", err)
+		}
+
+		defer func() {
+			closeErr := file.Close()
+			if closeErr != nil {
+				logger.Error(fmt.Sprintf("close file: %s", closeErr))
+			}
+		}()
+
+		_, err = file.WriteString(htmlContent)
+		if err != nil {
+			return fmt.Errorf("write HTML content: %w", err)
+		}
+
+		return nil
+	}
+}

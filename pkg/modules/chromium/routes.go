@@ -524,6 +524,102 @@ func screenshotMarkdownRoute(chromium Api) api.Route {
 	}
 }
 
+// htmlUrlRoute returns an [api.Route] which can get rendered HTML from a URL.
+func htmlUrlRoute(chromium Api) api.Route {
+	return api.Route{
+		Method:      http.MethodPost,
+		Path:        "/forms/chromium/html/url",
+		IsMultipart: true,
+		Handler: func(c echo.Context) error {
+			ctx := c.Get("context").(*api.Context)
+			form, options := FormDataChromiumOptions(ctx)
+
+			var url string
+			err := form.
+				MandatoryString("url", &url).
+				Validate()
+			if err != nil {
+				return fmt.Errorf("validate form data: %w", err)
+			}
+
+			err = htmlUrl(ctx, chromium, url, options)
+			if err != nil {
+				return fmt.Errorf("URL HTML: %w", err)
+			}
+
+			return nil
+		},
+	}
+}
+
+// htmlHtmlRoute returns an [api.Route] which can get rendered HTML from an HTML file.
+func htmlHtmlRoute(chromium Api) api.Route {
+	return api.Route{
+		Method:      http.MethodPost,
+		Path:        "/forms/chromium/html/html",
+		IsMultipart: true,
+		Handler: func(c echo.Context) error {
+			ctx := c.Get("context").(*api.Context)
+			form, options := FormDataChromiumOptions(ctx)
+
+			var inputPath string
+			err := form.
+				MandatoryPath("index.html", &inputPath).
+				Validate()
+			if err != nil {
+				return fmt.Errorf("validate form data: %w", err)
+			}
+
+			url := fmt.Sprintf("file://%s", inputPath)
+			err = htmlUrl(ctx, chromium, url, options)
+			if err != nil {
+				return fmt.Errorf("HTML rendered HTML: %w", err)
+			}
+
+			return nil
+		},
+	}
+}
+
+// htmlMarkdownRoute returns an [api.Route] which can get rendered HTML from
+// Markdown files.
+func htmlMarkdownRoute(chromium Api) api.Route {
+	return api.Route{
+		Method:      http.MethodPost,
+		Path:        "/forms/chromium/html/markdown",
+		IsMultipart: true,
+		Handler: func(c echo.Context) error {
+			ctx := c.Get("context").(*api.Context)
+			form, options := FormDataChromiumOptions(ctx)
+
+			var (
+				inputPath     string
+				markdownPaths []string
+			)
+
+			err := form.
+				MandatoryPath("index.html", &inputPath).
+				MandatoryPaths([]string{".md"}, &markdownPaths).
+				Validate()
+			if err != nil {
+				return fmt.Errorf("validate form data: %w", err)
+			}
+
+			url, err := markdownToHtml(ctx, inputPath, markdownPaths)
+			if err != nil {
+				return fmt.Errorf("transform markdown file(s) to HTML: %w", err)
+			}
+
+			err = htmlUrl(ctx, chromium, url, options)
+			if err != nil {
+				return fmt.Errorf("markdown HTML: %w", err)
+			}
+
+			return nil
+		},
+	}
+}
+
 func markdownToHtml(ctx *api.Context, inputPath string, markdownPaths []string) (string, error) {
 	// We have to convert each Markdown file referenced in the HTML
 	// file to... HTML. Thanks to the "html/template" package, we are
@@ -687,6 +783,23 @@ func screenshotUrl(ctx *api.Context, chromium Api, url string, options Screensho
 	err = handleChromiumError(err, options.Options)
 	if err != nil {
 		return fmt.Errorf("screenshot: %w", err)
+	}
+
+	err = ctx.AddOutputPaths(outputPath)
+	if err != nil {
+		return fmt.Errorf("add output path: %w", err)
+	}
+
+	return nil
+}
+
+func htmlUrl(ctx *api.Context, chromium Api, url string, options Options) error {
+	outputPath := ctx.GeneratePath(".html")
+
+	err := chromium.Html(ctx, ctx.Log(), url, outputPath, options)
+	err = handleChromiumError(err, options)
+	if err != nil {
+		return fmt.Errorf("rendered HTML: %w", err)
 	}
 
 	err = ctx.AddOutputPaths(outputPath)

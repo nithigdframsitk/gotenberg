@@ -26,6 +26,7 @@ type browser interface {
 	gotenberg.Process
 	pdf(ctx context.Context, logger *zap.Logger, url, outputPath string, options PdfOptions) error
 	screenshot(ctx context.Context, logger *zap.Logger, url, outputPath string, options ScreenshotOptions) error
+	html(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error
 }
 
 type browserArguments struct {
@@ -307,6 +308,29 @@ func (b *chromiumBrowser) screenshot(ctx context.Context, logger *zap.Logger, ur
 		// Screenshot specific.
 		setDeviceMetricsOverride(logger, options.Width, options.Height),
 		captureScreenshotActionFunc(logger, outputPath, options),
+		// Teardown.
+		page.Close(),
+	})
+}
+
+func (b *chromiumBrowser) html(ctx context.Context, logger *zap.Logger, url, outputPath string, options Options) error {
+	// Note: no error wrapping because it leaks on errors we want to display to
+	// the end user.
+	return b.do(ctx, logger, url, options, chromedp.Tasks{
+		network.Enable(),
+		fetch.Enable(),
+		runtime.Enable(),
+		clearCacheActionFunc(logger, b.arguments.clearCache),
+		clearCookiesActionFunc(logger, b.arguments.clearCookies),
+		disableJavaScriptActionFunc(logger, b.arguments.disableJavaScript),
+		setCookiesActionFunc(logger, options.Cookies),
+		userAgentOverride(logger, options.UserAgent),
+		navigateActionFunc(logger, url, options.SkipNetworkIdleEvent),
+		emulateMediaTypeActionFunc(logger, options.EmulatedMediaType),
+		waitForExpressionBeforePrintActionFunc(logger, b.arguments.disableJavaScript, options.WaitForExpression),
+		waitDelayBeforePrintActionFunc(logger, b.arguments.disableJavaScript, options.WaitDelay),
+		// HTML specific.
+		getRenderedHtmlActionFunc(logger, outputPath),
 		// Teardown.
 		page.Close(),
 	})
