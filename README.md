@@ -37,6 +37,78 @@ The API is now available on your host at http://localhost:3000.
 
 Head to the [documentation](https://gotenberg.dev/docs/getting-started/introduction) to learn how to interact with it 🚀
 
+## New HTML Rendering APIs 🆕
+
+Gotenberg now includes powerful HTML rendering endpoints that allow you to capture the rendered HTML content from various sources. These endpoints complement the existing PDF and screenshot generation capabilities.
+
+### Available HTML Rendering Endpoints
+
+#### 1. Render HTML from URL
+**POST** `/forms/chromium/html/url`
+
+Renders HTML content from a remote URL and returns the processed HTML source.
+
+```bash
+curl -X POST \
+  -F "url=https://example.com" \
+  http://localhost:3000/forms/chromium/html/url \
+  --output rendered.html
+```
+
+#### 2. Render HTML from File Upload
+**POST** `/forms/chromium/html/html`
+
+Processes uploaded HTML files and returns the rendered HTML content.
+
+```bash
+curl -X POST \
+  -F "index.html=@index.html" \
+  http://localhost:3000/forms/chromium/html/html \
+  --output rendered.html
+```
+
+#### 3. Render HTML from Markdown
+**POST** `/forms/chromium/html/markdown`
+
+Converts Markdown files to HTML and returns the rendered content.
+
+```bash
+curl -X POST \
+  -F "index.html=@template.html" \
+  -F "file.md=@content.md" \
+  http://localhost:3000/forms/chromium/html/markdown \
+  --output rendered.html
+```
+
+### Supported Options
+
+All HTML rendering endpoints support the same powerful options as the PDF and screenshot endpoints:
+
+- **Browser Options**: `waitDelay`, `waitForExpression`, `waitWindowStatus`
+- **Network Options**: `skipNetworkIdleEvent`, `failOnHttpStatusCodes`
+- **Headers & Authentication**: `extraHttpHeaders`, `cookies`, `userAgent`
+- **Display Options**: `emulatedMediaType`, `omitBackground`
+
+### Example with Options
+
+```bash
+curl -X POST \
+  -F "url=https://example.com" \
+  -F "waitDelay=2s" \
+  -F "emulatedMediaType=screen" \
+  -F "userAgent=Custom Bot 1.0" \
+  http://localhost:3000/forms/chromium/html/url \
+  --output rendered.html
+```
+
+### Use Cases
+
+- **Web Scraping**: Extract fully-rendered HTML content after JavaScript execution
+- **Content Processing**: Capture dynamic content for further analysis
+- **Template Testing**: Validate HTML template rendering
+- **SEO Analysis**: Get the complete rendered HTML as search engines see it
+- **Content Archival**: Save fully-processed HTML snapshots
+
 ## Sponsors
 
 <p align="center">
