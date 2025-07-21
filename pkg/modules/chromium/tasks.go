@@ -115,13 +115,47 @@ func printToPdfActionFunc(logger *zap.Logger, outputPath string, options PdfOpti
 
 func captureScreenshotActionFunc(logger *zap.Logger, outputPath string, options ScreenshotOptions) chromedp.ActionFunc {
 	return func(ctx context.Context) error {
+		var clip *page.Viewport
+
+		if options.Selector != "" {
+			// Evaluate the bounding box of the element matching the selector.
+			var box struct {
+				X      float64 `json:"x"`
+				Y      float64 `json:"y"`
+				Width  float64 `json:"width"`
+				Height float64 `json:"height"`
+			}
+			js := `(() => {
+				const el = document.querySelector(` + "`" + options.Selector + "`" + `);
+				if (!el) return null;
+				const rect = el.getBoundingClientRect();
+				return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+			})()`
+			err := chromedp.Run(ctx, chromedp.Evaluate(js, &box))
+			if err != nil {
+				return fmt.Errorf("evaluate selector bounding box: %w", err)
+			}
+			if box.Width == 0 || box.Height == 0 {
+				return fmt.Errorf("element not found or has zero size for selector: %s", options.Selector)
+			}
+			clip = &page.Viewport{
+				X:      box.X,
+				Y:      box.Y,
+				Width:  box.Width,
+				Height: box.Height,
+				Scale:  1,
+			}
+		}
+
 		captureScreenshot := page.CaptureScreenshot().
 			WithCaptureBeyondViewport(true).
 			WithFromSurface(true).
 			WithOptimizeForSpeed(options.OptimizeForSpeed).
 			WithFormat(page.CaptureScreenshotFormat(options.Format))
 
-		if options.Clip {
+		if clip != nil {
+			captureScreenshot = captureScreenshot.WithClip(clip)
+		} else if options.Clip {
 			captureScreenshot = captureScreenshot.WithClip(&page.Viewport{
 				Width:  float64(options.Width),
 				Height: float64(options.Height),

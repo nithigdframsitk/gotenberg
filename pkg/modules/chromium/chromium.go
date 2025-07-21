@@ -274,6 +274,9 @@ type ScreenshotOptions struct {
 	// OptimizeForSpeed defines whether to optimize image encoding for speed,
 	// not for resulting size.
 	OptimizeForSpeed bool
+
+	// Selector is a CSS selector for a specific element to screenshot. If empty, screenshot the viewport.
+	Selector string
 }
 
 // DefaultScreenshotOptions returns the default values for ScreenshotOptions.
@@ -286,6 +289,7 @@ func DefaultScreenshotOptions() ScreenshotOptions {
 		Format:           "png",
 		Quality:          100,
 		OptimizeForSpeed: false,
+		Selector:         "",
 	}
 }
 
